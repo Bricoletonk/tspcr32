@@ -39,4 +39,35 @@ Paquets refusés : `journalctl -k | grep FW-`
 - Le pare-feu est aussi administrable en SSH depuis le LAN (en plus de l'extérieur).
 - Module `nf_conntrack_ftp` chargé pour mieux suivre les connexions FTP.
 
+## Serveur web + FTP (`serveur-web-ftp/`)
+
+Hébergement mutualisé : chaque client reçoit un site Apache et un compte FTP virtuel (pas de vrai compte Linux), enfermé dans son dossier. Le pare-feu `firewall/firewall-apache-lan.sh` publie ce serveur.
+
+| Fichier | Rôle |
+|---|---|
+| `gestion-apache-ftp.sh` | Menu : créer / supprimer / lister un client (site Apache + compte FTP virtuel). |
+| `vsftpd.conf` | Configuration vsftpd : comptes virtuels, chroot, FTPS obligatoire, mode passif. → `/etc/vsftpd.conf` |
+| `pam.d-vsftpd` | Vérification des comptes virtuels par PAM (manquait). → `/etc/pam.d/vsftpd` |
+
+Prérequis : `apt install apache2 vsftpd db-util`, plus un certificat (commande dans `vsftpd.conf`).
+
+### Ce qui a été corrigé (novembre 2026)
+
+**Script de gestion**
+- **« Lister » affichait les mots de passe en clair.** Le fichier des comptes alterne nom et mot de passe, et le listage montrait toutes les lignes. Seuls les noms sont affichés maintenant.
+- **Un nom vide ou bizarre n'était pas refusé.** En suppression, un nom vide pouvait mener à `rm -rf /var/www/`. Les noms sont maintenant vérifiés (minuscules, chiffres, `-`, `_`).
+- La recherche et la suppression d'un compte regardaient aussi les lignes de mots de passe. Un mot de passe identique au nom d'un autre client faussait tout et pouvait supprimer le mauvais compte.
+- `logins.txt`, qui contient les mots de passe en clair, était lisible par tous les comptes de la machine. Il est maintenant réservé à root (600).
+- VirtualHost sur `*:80` au lieu de l'IP de la machine, pour que le site ne casse plus si l'IP change.
+- Listage des dossiers (`Options Indexes`) désactivé.
+- Droits 755 pour les dossiers et 644 pour les fichiers : avant, tous les fichiers devenaient exécutables.
+- Configuration Apache vérifiée (`apache2ctl configtest`) avant rechargement, et présence de `db_load` vérifiée.
+- `nouvel-utilisateur-apache.sh`, première version qui ne faisait que la création, a été retiré.
+
+**vsftpd.conf**
+- Le commentaire du chroot était **inversé** : avec `chroot_local_user=YES`, la liste contient les utilisateurs **non** enfermés.
+- **FTPS rendu obligatoire** (`force_local_*=YES`). Avant, un client pouvait se connecter en FTP simple et le mot de passe passait en clair.
+- `pasv_address` documentée : c'est l'IP publique quand le serveur est derrière un NAT.
+- Ajout du fichier PAM `pam.d-vsftpd`, sans lequel les comptes virtuels ne peuvent pas se connecter.
+
 Les versions d'origine restent consultables dans l'historique du dépôt [Debian](https://github.com/Bricoletonk/Debian).

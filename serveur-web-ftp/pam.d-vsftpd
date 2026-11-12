@@ -1,0 +1,17 @@
+# ==========================================================================
+#  /etc/pam.d/vsftpd : vérification des comptes FTP virtuels (labo TSPCR)
+#
+#  Ce fichier manquait dans le dépôt : sans lui, vsftpd vérifie les comptes
+#  Linux classiques et les comptes virtuels sont refusés.
+#
+#  pam_userdb lit la base créée par gestion-apache-ftp.sh.
+#  Attention : le chemin s'écrit SANS l'extension .db
+#  (le fichier réel est /etc/vsftpd/logins.db).
+#
+#  Installation :
+#    cp /etc/pam.d/vsftpd /etc/pam.d/vsftpd.orig   # sauvegarde
+#    cp pam.d-vsftpd /etc/pam.d/vsftpd
+#    systemctl restart vsftpd
+# ==========================================================================
+auth     required pam_userdb.so db=/etc/vsftpd/logins
+account  required pam_userdb.so db=/etc/vsftpd/logins
